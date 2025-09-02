@@ -1,0 +1,29 @@
+# Arquivos e pastas específicos do sistema operacional
+*.swp
+*~
+.DS_Store
+
+# Arquivos específicos de IDEs e editores
+.vscode/
+.idea/
+
+# Pastas de compilação do .NET
+[Bb]in/
+[Oo]bj/
+
+# Arquivos gerados pelo usuário durante o desenvolvimento
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Arquivos de log
+*.log
+
+# Arquivos de configuração local que não devem ir para o repositório
+appsettings.Development.json
+Properties/launchSettings.json
+
+# Cache do NuGet
+.nuget/
+packages/

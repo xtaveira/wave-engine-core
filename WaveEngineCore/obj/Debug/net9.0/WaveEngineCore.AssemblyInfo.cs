@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("WaveEngineCore")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+d6ffc396789d26af67ac9f0c4a64339937139f59")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+7b3bd192306af5a12672eee22e2cf161f36a7de0")]
 [assembly: System.Reflection.AssemblyProductAttribute("WaveEngineCore")]
 [assembly: System.Reflection.AssemblyTitleAttribute("WaveEngineCore")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
