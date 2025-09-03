@@ -10,18 +10,17 @@ namespace Microwave.Domain
         public MicrowaveOven(int timeInSeconds, int powerLevel)
         {
             if (timeInSeconds < 1 || timeInSeconds > 120)
-                throw new ArgumentException("Tempo deve estar entre 1 e 120 segundos.");
+                throw new ArgumentException("Time must be between 1 and 120 seconds.");
 
             if (powerLevel < 1 || powerLevel > 10)
-                throw new ArgumentException("Potência deve estar entre 1 e 10.");
+                throw new ArgumentException("Power level must be between 1 and 10.");
 
             TimeInSeconds = timeInSeconds;
             PowerLevel = powerLevel;
         }
 
-        public string StartHeating()
+        public void StartHeating()
         {
-            return $"Aquecimento iniciado: {TimeInSeconds}s a potência {PowerLevel}.";
         }
     }
 }
