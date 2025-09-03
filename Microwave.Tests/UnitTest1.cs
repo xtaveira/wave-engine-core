@@ -1,5 +1,7 @@
 ﻿using Microwave.Domain;
 using Microwave.Application;
+using Microwave.Domain.Validators;
+using Microwave.Domain.Factories;
 
 namespace Microwave.Tests;
 
@@ -191,7 +193,7 @@ public class UnitTest1
         var status = service.GetHeatingProgress(mockStorage);
 
         Assert.True(status.IsRunning);
-        Assert.Equal(100, status.RemainingTime); // 120 - 20 = 100
+        Assert.Equal(100, status.RemainingTime);
         Assert.Equal("100s", status.FormattedRemainingTime);
     }
 
@@ -285,5 +287,312 @@ public class UnitTest1
         Assert.True(increaseResult.Success);
         Assert.Contains("aumentado", increaseResult.Message.ToLower());
         Assert.Contains("60s", increaseResult.Message);
+    }
+
+
+    [Fact]
+    public void TestGetPredefinedPrograms_ShouldReturn5Programs()
+    {
+        var service = new MicrowaveService();
+
+        var programs = service.GetPredefinedPrograms();
+
+        Assert.Equal(5, programs.Count());
+
+        var programNames = programs.Select(p => p.Name).ToList();
+        Assert.Contains("Pipoca", programNames);
+        Assert.Contains("Leite", programNames);
+        Assert.Contains("Carnes de boi", programNames);
+        Assert.Contains("Frango", programNames);
+        Assert.Contains("Feijão", programNames);
+    }
+
+    [Fact]
+    public void TestPipocaProgram_ShouldHaveCorrectProperties()
+    {
+        var service = new MicrowaveService();
+
+        var programs = service.GetPredefinedPrograms();
+        var pipoca = programs.FirstOrDefault(p => p.Name == "Pipoca");
+
+        Assert.NotNull(pipoca);
+        Assert.Equal("Pipoca", pipoca.Name);
+        Assert.Equal("Pipoca (de micro-ondas)", pipoca.Food);
+        Assert.Equal(180, pipoca.TimeInSeconds);
+        Assert.Equal(7, pipoca.PowerLevel);
+        Assert.NotEqual(".", pipoca.HeatingChar);
+        Assert.Contains("barulho de estouros", pipoca.Instructions);
+    }
+
+    [Fact]
+    public void TestLeiteProgram_ShouldHaveCorrectProperties()
+    {
+        var service = new MicrowaveService();
+
+        var programs = service.GetPredefinedPrograms();
+        var leite = programs.FirstOrDefault(p => p.Name == "Leite");
+
+        Assert.NotNull(leite);
+        Assert.Equal("Leite", leite.Name);
+        Assert.Equal("Leite", leite.Food);
+        Assert.Equal(300, leite.TimeInSeconds);
+        Assert.Equal(5, leite.PowerLevel);
+        Assert.NotEqual(".", leite.HeatingChar);
+        Assert.Contains("choque térmico", leite.Instructions);
+    }
+
+    [Fact]
+    public void TestCarnesBoiProgram_ShouldHaveCorrectProperties()
+    {
+        var service = new MicrowaveService();
+
+        var programs = service.GetPredefinedPrograms();
+        var carnes = programs.FirstOrDefault(p => p.Name == "Carnes de boi");
+
+        Assert.NotNull(carnes);
+        Assert.Equal("Carnes de boi", carnes.Name);
+        Assert.Equal("Carne em pedaço ou fatias", carnes.Food);
+        Assert.Equal(840, carnes.TimeInSeconds);
+        Assert.Equal(4, carnes.PowerLevel);
+        Assert.NotEqual(".", carnes.HeatingChar);
+        Assert.Contains("vire o conteúdo", carnes.Instructions);
+    }
+
+    [Fact]
+    public void TestFrangoProgram_ShouldHaveCorrectProperties()
+    {
+        var service = new MicrowaveService();
+
+        var programs = service.GetPredefinedPrograms();
+        var frango = programs.FirstOrDefault(p => p.Name == "Frango");
+
+        Assert.NotNull(frango);
+        Assert.Equal("Frango", frango.Name);
+        Assert.Equal("Frango (qualquer corte)", frango.Food);
+        Assert.Equal(480, frango.TimeInSeconds);
+        Assert.Equal(7, frango.PowerLevel);
+        Assert.NotEqual(".", frango.HeatingChar);
+        Assert.Contains("vire o conteúdo", frango.Instructions);
+    }
+
+    [Fact]
+    public void TestFeijaoProgram_ShouldHaveCorrectProperties()
+    {
+        var service = new MicrowaveService();
+
+        var programs = service.GetPredefinedPrograms();
+        var feijao = programs.FirstOrDefault(p => p.Name == "Feijão");
+
+        Assert.NotNull(feijao);
+        Assert.Equal("Feijão", feijao.Name);
+        Assert.Equal("Feijão congelado", feijao.Food);
+        Assert.Equal(480, feijao.TimeInSeconds);
+        Assert.Equal(9, feijao.PowerLevel);
+        Assert.NotEqual(".", feijao.HeatingChar);
+        Assert.Contains("recipiente destampado", feijao.Instructions);
+    }
+
+    [Fact]
+    public void TestAllProgramsHaveUniqueHeatingChars()
+    {
+        var service = new MicrowaveService();
+
+        var programs = service.GetPredefinedPrograms();
+        var heatingChars = programs.Select(p => p.HeatingChar).ToList();
+
+        Assert.Equal(heatingChars.Count, heatingChars.Distinct().Count());
+
+        Assert.DoesNotContain(".", heatingChars);
+    }
+
+    [Fact]
+    public void TestStartPredefinedProgram_ShouldUseCorrectTimeAndPower()
+    {
+        var mockStorage = new MockStateStorage();
+        var service = new MicrowaveService();
+
+        var programs = service.GetPredefinedPrograms();
+        var pipoca = programs.First(p => p.Name == "Pipoca");
+
+        var result = service.StartPredefinedProgram(pipoca.Name, mockStorage);
+
+        Console.WriteLine($"Result Success: {result.Success}");
+        Console.WriteLine($"Result Message: {result.Message}");
+
+        Assert.True(result.Success);
+        Assert.Contains("Pipoca", result.Message);
+        Assert.Contains("180s", result.Message);
+        Assert.Contains("potência 7", result.Message);
+    }
+    [Fact]
+    public void TestStartPredefinedProgram_ShouldUseCustomHeatingString()
+    {
+        var mockStorage = new MockStateStorage();
+        var service = new MicrowaveService();
+
+        service.StartPredefinedProgram("Pipoca", mockStorage);
+        var startTime = DateTime.Now.AddSeconds(-2).ToString("O");
+        mockStorage.SetString("StartTime", startTime);
+
+        var status = service.GetHeatingProgress(mockStorage);
+
+        Assert.True(status.IsRunning);
+        Assert.DoesNotContain(".", status.StatusMessage);
+        var segments = status.StatusMessage.Split(' ');
+        Assert.Equal(2, segments.Length);
+    }
+
+    [Fact]
+    public void TestIncreaseTime_ShouldNotWorkForPredefinedPrograms()
+    {
+        var mockStorage = new MockStateStorage();
+        var service = new MicrowaveService();
+
+        service.StartPredefinedProgram("Leite", mockStorage);
+
+        var result = service.IncreaseTime(30, mockStorage);
+
+        Assert.False(result.Success);
+        Assert.Contains("programa pré-definido", result.Message.ToLower());
+    }
+
+    [Fact]
+    public void TestPauseAndCancel_ShouldWorkForPredefinedPrograms()
+    {
+        var mockStorage = new MockStateStorage();
+        var service = new MicrowaveService();
+
+        service.StartPredefinedProgram("Frango", mockStorage);
+
+        var pauseResult = service.PauseOrCancel(mockStorage);
+        Assert.True(pauseResult.Success);
+        Assert.Contains("pausado", pauseResult.Message.ToLower());
+
+        var cancelResult = service.PauseOrCancel(mockStorage);
+        Assert.True(cancelResult.Success);
+        Assert.Contains("cancelado", cancelResult.Message.ToLower());
+    }
+
+    [Fact]
+    public void TestStartInvalidPredefinedProgram_ShouldReturnError()
+    {
+        var mockStorage = new MockStateStorage();
+        var service = new MicrowaveService();
+
+        var result = service.StartPredefinedProgram("ProgramaInexistente", mockStorage);
+
+        Assert.False(result.Success);
+        Assert.Contains("não encontrado", result.Message.ToLower());
+    }
+
+    [Fact]
+    public void TestResumePredefinedProgram_ShouldMaintainCustomHeatingChar()
+    {
+        var mockStorage = new MockStateStorage();
+        var service = new MicrowaveService();
+
+        service.StartPredefinedProgram("Feijão", mockStorage);
+
+        var startTime = DateTime.Now.AddSeconds(-30).ToString("O");
+        mockStorage.SetString("StartTime", startTime);
+        service.PauseOrCancel(mockStorage);
+
+        var resumeResult = service.StartHeating(0, 0, mockStorage);
+        Assert.True(resumeResult.Success);
+
+        var startTimeResume = DateTime.Now.AddSeconds(-10).ToString("O");
+        mockStorage.SetString("StartTime", startTimeResume);
+
+        var status = service.GetHeatingProgress(mockStorage);
+        Assert.DoesNotContain(".", status.StatusMessage);
+    }
+
+
+    [Fact]
+    public void TestManualTimeValidator_ShouldAllowValidRange()
+    {
+        var validator = new ManualTimeValidator();
+
+        validator.Validate(1);
+        validator.Validate(60);
+        validator.Validate(120);
+
+        Assert.True(true);
+    }
+
+    [Fact]
+    public void TestManualTimeValidator_ShouldRejectInvalidRange()
+    {
+        var validator = new ManualTimeValidator();
+
+        Assert.Throws<ArgumentException>(() => validator.Validate(0));
+        Assert.Throws<ArgumentException>(() => validator.Validate(121));
+        Assert.Throws<ArgumentException>(() => validator.Validate(300));
+    }
+
+    [Fact]
+    public void TestPredefinedTimeValidator_ShouldAllowValidRange()
+    {
+        var validator = new PredefinedTimeValidator();
+
+        validator.Validate(1);
+        validator.Validate(300);
+        validator.Validate(840);
+        validator.Validate(1800);
+
+        Assert.True(true);
+    }
+
+    [Fact]
+    public void TestPredefinedTimeValidator_ShouldRejectInvalidRange()
+    {
+        var validator = new PredefinedTimeValidator();
+
+        Assert.Throws<ArgumentException>(() => validator.Validate(0));
+        Assert.Throws<ArgumentException>(() => validator.Validate(1801));
+        Assert.Throws<ArgumentException>(() => validator.Validate(3600));
+    }
+
+    [Fact]
+    public void TestTimeValidatorFactory_ShouldCreateCorrectValidators()
+    {
+        var manualValidator = TimeValidatorFactory.CreateManual();
+        var predefinedValidator = TimeValidatorFactory.CreatePredefined();
+
+        Assert.IsType<ManualTimeValidator>(manualValidator);
+        Assert.IsType<PredefinedTimeValidator>(predefinedValidator);
+    }
+
+    [Fact]
+    public void TestMicrowaveOven_CreateManual_ShouldUseManualValidator()
+    {
+        var oven1 = MicrowaveOven.CreateManual(60, 5);
+        Assert.Equal(60, oven1.TimeInSeconds);
+
+        Assert.Throws<ArgumentException>(() => MicrowaveOven.CreateManual(300, 5));
+        Assert.Throws<ArgumentException>(() => MicrowaveOven.CreateManual(300, 5));
+    }
+
+    [Fact]
+    public void TestMicrowaveOven_CreatePredefined_ShouldUsePredefinedValidator()
+    {
+        var oven1 = MicrowaveOven.CreatePredefined(300, 5);
+        Assert.Equal(300, oven1.TimeInSeconds);
+
+        var oven2 = MicrowaveOven.CreatePredefined(840, 4);
+        Assert.Equal(840, oven2.TimeInSeconds);
+
+        Assert.Throws<ArgumentException>(() => MicrowaveOven.CreatePredefined(2000, 5));
+        Assert.Throws<ArgumentException>(() => MicrowaveOven.CreatePredefined(2000, 5));
+    }
+
+    [Fact]
+    public void TestBackwardCompatibility_DefaultConstructor_ShouldUseManualValidator()
+    {
+        var oven1 = new MicrowaveOven(60, 5);
+        Assert.Equal(60, oven1.TimeInSeconds);
+
+        Assert.Throws<ArgumentException>(() => new MicrowaveOven(300, 5));
+        Assert.Throws<ArgumentException>(() => new MicrowaveOven(300, 5));
     }
 }
