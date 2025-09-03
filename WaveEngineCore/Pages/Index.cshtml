@@ -4,59 +4,101 @@
     ViewData["Title"] = "Micro-ondas Digital";
 }
 
-<h1>Micro-ondas Digital</h1>
+<h1>🎛️ Micro-ondas Digital</h1>
+
+<h2>🍽️ Programas Pré-definidos</h2>
+<div class="predefined-programs">
+    @foreach (var program in Model.PredefinedPrograms)
+    {
+        <div class="program-card">
+            <form method="post" asp-page-handler="StartPredefinedProgram" style="margin: 0;">
+                <input type="hidden" name="programName" value="@program.Name" />
+                <button type="submit" class="program-btn" data-program="@program.Name">
+                    <strong>@program.Name</strong><br />
+                    <small>@program.Food</small><br />
+                    <small>@(program.TimeInSeconds >= 60 ? $"{program.TimeInSeconds/60}:{(program.TimeInSeconds%60):00}" :
+                                            $"{program.TimeInSeconds}s"), P@(program.PowerLevel)</small>
+                </button>
+            </form>
+            <div class="program-instructions">
+                <strong>Instruções:</strong><br />
+                @program.Instructions
+            </div>
+        </div>
+    }
+</div>
+
+<hr style="margin: 20px 0;" />
+
+<h2>🔥 Aquecimento Manual</h2>
 
 <form method="post" asp-page-handler="StartHeating" id="startForm">
-    <div>
+    <div style="margin-bottom: 10px;">
         <label for="timeInSeconds">Tempo (segundos, 1-120):</label>
-        <input type="number" id="timeInSeconds" name="timeInSeconds" min="1" max="120" />
+        <input type="number" id="timeInSeconds" name="timeInSeconds" min="1" max="120" class="form-control"
+            style="width: 200px; display: inline-block;" />
     </div>
-    <div>
+    <div style="margin-bottom: 10px;">
         <label for="powerLevel">Potência (1-10):</label>
-        <input type="number" id="powerLevel" name="powerLevel" min="1" max="10" value="10" />
+        <input type="number" id="powerLevel" name="powerLevel" min="1" max="10" value="10" class="form-control"
+            style="width: 200px; display: inline-block;" />
     </div>
-    <button type="submit" id="startBtn">Iniciar Aquecimento</button>
+    <button type="submit" id="startBtn" class="btn btn-success">Iniciar Aquecimento</button>
 </form>
 
 <form method="post" asp-page-handler="ResumeHeating" id="resumeForm" style="display:none;">
-    <button type="submit" id="resumeBtn">Retomar Aquecimento</button>
+    <button type="submit" id="resumeBtn" class="btn btn-warning">Retomar Aquecimento</button>
 </form>
 
-<div style="margin-top: 10px;">
-    <form method="post" asp-page-handler="StartQuickHeat" style="display:inline;">
-        <button type="submit">Início Rápido (30s, P10)</button>
+<div style="margin-top: 15px;">
+    <form method="post" asp-page-handler="StartQuickHeat" style="display:inline; margin-right: 10px;">
+        <button type="submit" class="btn btn-info">Início Rápido (30s, P10)</button>
     </form>
 
-    <form method="post" asp-page-handler="IncreaseTime" style="display:inline;">
-        <button type="submit">+30s</button>
+    <form method="post" asp-page-handler="IncreaseTime" style="display:inline; margin-right: 10px;">
+        <button type="submit" class="btn btn-outline-primary">+30s</button>
     </form>
 
     <form method="post" asp-page-handler="PauseOrCancel" style="display:inline;">
-        <button type="submit" id="pauseCancelBtn">Pausar/Cancelar</button>
+        <button type="submit" id="pauseCancelBtn" class="btn btn-danger">Pausar/Cancelar</button>
     </form>
 </div>
 
 @if (ViewData["Message"] != null)
 {
-    <p><strong>@ViewData["Message"]</strong></p>
+    <div class="alert alert-info" role="alert" style="margin-top: 15px;">
+        <strong>@ViewData["Message"]</strong>
+    </div>
 }
 
 @Html.AntiForgeryToken()
 
 <hr />
 
-<h2>Status do Microondas</h2>
-<button id="getProgressBtn" type="button">Ver Progresso</button>
-<button id="autoUpdateBtn" type="button">Atualização Automática</button>
+<h2>📊 Status do Microondas</h2>
+<button id="getProgressBtn" type="button" class="btn btn-primary">Ver Progresso</button>
+<button id="autoUpdateBtn" type="button" class="btn btn-secondary">Atualização Automática</button>
 <div id="progressContainer" style="margin-top: 20px;">
     <p id="progressText">Clique para ver o progresso.</p>
-    <div id="visualProgress"
-        style="font-family: monospace; font-size: 16px; padding: 10px; background-color: #f0f0f0; border-radius: 5px; margin-top: 10px;">
+    <div id="visualProgress" class="program-progress">
     </div>
 </div>
 
 <script>
     let autoUpdateInterval = null;
+
+    function updateProgramStatus(data) {
+        const programButtons = document.querySelectorAll('.program-btn');
+        const currentProgram = data.currentProgram;
+
+        programButtons.forEach(btn => {
+            if (currentProgram && btn.getAttribute('data-program') === currentProgram) {
+                btn.classList.add('active');
+            } else {
+                btn.classList.remove('active');
+            }
+        });
+    }
 
     async function updateProgress() {
         try {
@@ -72,7 +114,6 @@
 
             const data = await response.json();
 
-            // Atualiza informações de progresso
             document.getElementById('progressText').innerText =
                 `Status: ${data.isRunning ? 'Aquecendo' : 'Parado'} | ` +
                 `Tempo restante: ${data.formattedRemainingTime} | ` +
@@ -81,7 +122,8 @@
 
             document.getElementById('visualProgress').innerText = data.progress;
 
-            // Gerencia exibição dos formulários baseado no estado
+            updateProgramStatus(data);
+
             const startForm = document.getElementById('startForm');
             const resumeForm = document.getElementById('resumeForm');
             const pauseBtn = document.getElementById('pauseCancelBtn');
@@ -91,18 +133,15 @@
             const autoUpdateBtn = document.getElementById('autoUpdateBtn');
 
             if (data.progress && data.progress.includes('PAUSADO')) {
-                // Estado PAUSADO: Mostra botão Retomar, esconde formulário principal
                 startForm.style.display = 'none';
                 resumeForm.style.display = 'block';
                 pauseBtn.textContent = 'Cancelar';
-                // Mantém auto-update parado quando pausado
                 if (autoUpdateInterval) {
                     clearInterval(autoUpdateInterval);
                     autoUpdateInterval = null;
                     autoUpdateBtn.textContent = 'Atualização Automática';
                 }
             } else if (data.isRunning) {
-                // Estado AQUECENDO: Esconde retomar, mostra formulário mas desabilita
                 startForm.style.display = 'block';
                 resumeForm.style.display = 'none';
                 startBtn.textContent = 'Aquecendo...';
@@ -111,13 +150,11 @@
                 powerInput.disabled = true;
                 pauseBtn.textContent = 'Pausar';
 
-                // ATIVA auto-update automaticamente quando aquecendo
                 if (!autoUpdateInterval) {
                     autoUpdateInterval = setInterval(updateProgress, 1000);
                     autoUpdateBtn.textContent = 'Parar Atualização';
                 }
             } else {
-                // Estado PARADO: Mostra formulário normal, habilita controles
                 startForm.style.display = 'block';
                 resumeForm.style.display = 'none';
                 startBtn.textContent = 'Iniciar Aquecimento';
@@ -128,8 +165,6 @@
                 powerInput.required = true;
                 pauseBtn.textContent = 'Limpar';
 
-                // Para auto-update quando parado (a menos que usuário tenha ativado manualmente)
-                // Verifica se terminou o aquecimento para parar automaticamente
                 if (autoUpdateInterval && data.progress && data.progress.includes('concluído')) {
                     clearInterval(autoUpdateInterval);
                     autoUpdateInterval = null;
@@ -143,9 +178,7 @@
         }
     }
 
-    // Atualiza a interface no carregamento da página (sem ativar auto-update)
     document.addEventListener('DOMContentLoaded', () => {
-        updateProgress(); // Apenas uma atualização inicial
     });
 
     document.getElementById('getProgressBtn').addEventListener('click', updateProgress);
@@ -162,7 +195,6 @@
         }
     });
 
-    // Valida o formulário apenas quando não estiver retomando
     document.getElementById('startForm').addEventListener('submit', function (e) {
         const timeInput = document.getElementById('timeInSeconds');
         const powerInput = document.getElementById('powerLevel');

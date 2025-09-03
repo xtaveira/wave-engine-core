@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microwave.Domain;
+using Microwave.Domain.DTOs;
 using WaveEngineCore.Infrastructure;
 
 namespace WaveEngineCore.Pages;
@@ -9,6 +10,8 @@ public class IndexModel : PageModel
 {
     private readonly ILogger<IndexModel> _logger;
     private readonly IMicrowaveService _microwaveService;
+
+    public IEnumerable<PredefinedProgram> PredefinedPrograms { get; set; } = new List<PredefinedProgram>();
 
     public IndexModel(ILogger<IndexModel> logger, IMicrowaveService microwaveService)
     {
@@ -21,6 +24,8 @@ public class IndexModel : PageModel
         var stateStorage = new SessionStateStorage(HttpContext.Session);
         var status = _microwaveService.GetHeatingProgress(stateStorage);
         ViewData["CurrentStatus"] = status;
+
+        PredefinedPrograms = _microwaveService.GetPredefinedPrograms();
     }
 
     public IActionResult OnPostStartHeating(int timeInSeconds, int powerLevel)
@@ -32,6 +37,8 @@ public class IndexModel : PageModel
         var status = _microwaveService.GetHeatingProgress(stateStorage);
         ViewData["CurrentStatus"] = status;
 
+        PredefinedPrograms = _microwaveService.GetPredefinedPrograms();
+
         return Page();
     }
 
@@ -40,6 +47,9 @@ public class IndexModel : PageModel
         var stateStorage = new SessionStateStorage(HttpContext.Session);
         var result = _microwaveService.StartQuickHeat(stateStorage);
         ViewData["Message"] = result.Message;
+
+        PredefinedPrograms = _microwaveService.GetPredefinedPrograms();
+
         return Page();
     }
 
@@ -48,6 +58,9 @@ public class IndexModel : PageModel
         var stateStorage = new SessionStateStorage(HttpContext.Session);
         var result = _microwaveService.IncreaseTime(30, stateStorage);
         ViewData["Message"] = result.Message;
+
+        PredefinedPrograms = _microwaveService.GetPredefinedPrograms();
+
         return Page();
     }
 
@@ -59,6 +72,8 @@ public class IndexModel : PageModel
 
         var status = _microwaveService.GetHeatingProgress(stateStorage);
         ViewData["CurrentStatus"] = status;
+
+        PredefinedPrograms = _microwaveService.GetPredefinedPrograms();
 
         return Page();
     }
@@ -72,6 +87,22 @@ public class IndexModel : PageModel
         var status = _microwaveService.GetHeatingProgress(stateStorage);
         ViewData["CurrentStatus"] = status;
 
+        PredefinedPrograms = _microwaveService.GetPredefinedPrograms();
+
+        return Page();
+    }
+
+    public IActionResult OnPostStartPredefinedProgram(string programName)
+    {
+        var stateStorage = new SessionStateStorage(HttpContext.Session);
+        var result = _microwaveService.StartPredefinedProgram(programName, stateStorage);
+        ViewData["Message"] = result.Message;
+
+        var status = _microwaveService.GetHeatingProgress(stateStorage);
+        ViewData["CurrentStatus"] = status;
+
+        PredefinedPrograms = _microwaveService.GetPredefinedPrograms();
+
         return Page();
     }
 
@@ -79,6 +110,8 @@ public class IndexModel : PageModel
     {
         var stateStorage = new SessionStateStorage(HttpContext.Session);
         var status = _microwaveService.GetHeatingProgress(stateStorage);
+        var currentProgram = stateStorage.GetString("CurrentProgram");
+
         return new JsonResult(new
         {
             progress = status.StatusMessage,
@@ -86,7 +119,7 @@ public class IndexModel : PageModel
             remainingTime = status.RemainingTime,
             formattedRemainingTime = status.FormattedRemainingTime,
             powerLevel = status.PowerLevel,
-            progressPercent = status.Progress
+            progressPercent = status.Progress,
         });
     }
 }
