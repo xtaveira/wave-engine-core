@@ -10,5 +10,8 @@ namespace Microwave.Domain
         OperationResult StartQuickHeat(IStateStorage stateStorage);
         OperationResult IncreaseTime(int additionalSeconds, IStateStorage stateStorage);
         OperationResult PauseOrCancel(IStateStorage stateStorage);
+
+        IEnumerable<PredefinedProgram> GetPredefinedPrograms();
+        OperationResult StartPredefinedProgram(string programName, IStateStorage stateStorage);
     }
 }
