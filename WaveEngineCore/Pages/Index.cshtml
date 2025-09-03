@@ -1,10 +1,176 @@
 ﻿@page
 @model IndexModel
 @{
-    ViewData["Title"] = "Home page";
+    ViewData["Title"] = "Micro-ondas Digital";
 }
 
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
+<h1>Micro-ondas Digital</h1>
+
+<form method="post" asp-page-handler="StartHeating" id="startForm">
+    <div>
+        <label for="timeInSeconds">Tempo (segundos, 1-120):</label>
+        <input type="number" id="timeInSeconds" name="timeInSeconds" min="1" max="120" />
+    </div>
+    <div>
+        <label for="powerLevel">Potência (1-10):</label>
+        <input type="number" id="powerLevel" name="powerLevel" min="1" max="10" value="10" />
+    </div>
+    <button type="submit" id="startBtn">Iniciar Aquecimento</button>
+</form>
+
+<form method="post" asp-page-handler="ResumeHeating" id="resumeForm" style="display:none;">
+    <button type="submit" id="resumeBtn">Retomar Aquecimento</button>
+</form>
+
+<div style="margin-top: 10px;">
+    <form method="post" asp-page-handler="StartQuickHeat" style="display:inline;">
+        <button type="submit">Início Rápido (30s, P10)</button>
+    </form>
+
+    <form method="post" asp-page-handler="IncreaseTime" style="display:inline;">
+        <button type="submit">+30s</button>
+    </form>
+
+    <form method="post" asp-page-handler="PauseOrCancel" style="display:inline;">
+        <button type="submit" id="pauseCancelBtn">Pausar/Cancelar</button>
+    </form>
 </div>
+
+@if (ViewData["Message"] != null)
+{
+    <p><strong>@ViewData["Message"]</strong></p>
+}
+
+@Html.AntiForgeryToken()
+
+<hr />
+
+<h2>Status do Microondas</h2>
+<button id="getProgressBtn" type="button">Ver Progresso</button>
+<button id="autoUpdateBtn" type="button">Atualização Automática</button>
+<div id="progressContainer" style="margin-top: 20px;">
+    <p id="progressText">Clique para ver o progresso.</p>
+    <div id="visualProgress"
+        style="font-family: monospace; font-size: 16px; padding: 10px; background-color: #f0f0f0; border-radius: 5px; margin-top: 10px;">
+    </div>
+</div>
+
+<script>
+    let autoUpdateInterval = null;
+
+    async function updateProgress() {
+        try {
+            const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+
+            const response = await fetch('/?handler=GetProgress', {
+                method: 'POST',
+                headers: {
+                    'RequestVerificationToken': token,
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                }
+            });
+
+            const data = await response.json();
+
+            // Atualiza informações de progresso
+            document.getElementById('progressText').innerText =
+                `Status: ${data.isRunning ? 'Aquecendo' : 'Parado'} | ` +
+                `Tempo restante: ${data.formattedRemainingTime} | ` +
+                `Potência: ${data.powerLevel} | ` +
+                `Progresso: ${data.progressPercent}%`;
+
+            document.getElementById('visualProgress').innerText = data.progress;
+
+            // Gerencia exibição dos formulários baseado no estado
+            const startForm = document.getElementById('startForm');
+            const resumeForm = document.getElementById('resumeForm');
+            const pauseBtn = document.getElementById('pauseCancelBtn');
+            const startBtn = document.getElementById('startBtn');
+            const timeInput = document.getElementById('timeInSeconds');
+            const powerInput = document.getElementById('powerLevel');
+            const autoUpdateBtn = document.getElementById('autoUpdateBtn');
+
+            if (data.progress && data.progress.includes('PAUSADO')) {
+                // Estado PAUSADO: Mostra botão Retomar, esconde formulário principal
+                startForm.style.display = 'none';
+                resumeForm.style.display = 'block';
+                pauseBtn.textContent = 'Cancelar';
+                // Mantém auto-update parado quando pausado
+                if (autoUpdateInterval) {
+                    clearInterval(autoUpdateInterval);
+                    autoUpdateInterval = null;
+                    autoUpdateBtn.textContent = 'Atualização Automática';
+                }
+            } else if (data.isRunning) {
+                // Estado AQUECENDO: Esconde retomar, mostra formulário mas desabilita
+                startForm.style.display = 'block';
+                resumeForm.style.display = 'none';
+                startBtn.textContent = 'Aquecendo...';
+                startBtn.disabled = true;
+                timeInput.disabled = true;
+                powerInput.disabled = true;
+                pauseBtn.textContent = 'Pausar';
+
+                // ATIVA auto-update automaticamente quando aquecendo
+                if (!autoUpdateInterval) {
+                    autoUpdateInterval = setInterval(updateProgress, 1000);
+                    autoUpdateBtn.textContent = 'Parar Atualização';
+                }
+            } else {
+                // Estado PARADO: Mostra formulário normal, habilita controles
+                startForm.style.display = 'block';
+                resumeForm.style.display = 'none';
+                startBtn.textContent = 'Iniciar Aquecimento';
+                startBtn.disabled = false;
+                timeInput.disabled = false;
+                powerInput.disabled = false;
+                timeInput.required = true;
+                powerInput.required = true;
+                pauseBtn.textContent = 'Limpar';
+
+                // Para auto-update quando parado (a menos que usuário tenha ativado manualmente)
+                // Verifica se terminou o aquecimento para parar automaticamente
+                if (autoUpdateInterval && data.progress && data.progress.includes('concluído')) {
+                    clearInterval(autoUpdateInterval);
+                    autoUpdateInterval = null;
+                    autoUpdateBtn.textContent = 'Atualização Automática';
+                }
+            }
+
+        } catch (error) {
+            console.error('Erro no progresso:', error);
+            document.getElementById('progressText').innerText = 'Erro ao obter progresso.';
+        }
+    }
+
+    // Atualiza a interface no carregamento da página (sem ativar auto-update)
+    document.addEventListener('DOMContentLoaded', () => {
+        updateProgress(); // Apenas uma atualização inicial
+    });
+
+    document.getElementById('getProgressBtn').addEventListener('click', updateProgress);
+
+    document.getElementById('autoUpdateBtn').addEventListener('click', () => {
+        if (autoUpdateInterval) {
+            clearInterval(autoUpdateInterval);
+            autoUpdateInterval = null;
+            document.getElementById('autoUpdateBtn').innerText = 'Atualização Automática';
+        } else {
+            autoUpdateInterval = setInterval(updateProgress, 1000);
+            document.getElementById('autoUpdateBtn').innerText = 'Parar Atualização';
+            updateProgress();
+        }
+    });
+
+    // Valida o formulário apenas quando não estiver retomando
+    document.getElementById('startForm').addEventListener('submit', function (e) {
+        const timeInput = document.getElementById('timeInSeconds');
+        const powerInput = document.getElementById('powerLevel');
+
+        if (!timeInput.disabled && (!timeInput.value || !powerInput.value)) {
+            e.preventDefault();
+            alert('Por favor, preencha tempo e potência.');
+            return false;
+        }
+    });
+</script>
