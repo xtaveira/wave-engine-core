@@ -11,6 +11,8 @@ namespace Microwave.Application
         private const string SESSION_START_TIME = "StartTime";
         private const string SESSION_MICROWAVE_STATE = "MicrowaveState";
         private const string SESSION_PAUSED_REMAINING_TIME = "PausedRemainingTime";
+        private const string SESSION_CURRENT_PROGRAM = "CurrentProgram";
+        private const string SESSION_HEATING_CHAR = "HeatingChar";
 
         private const string STATE_STOPPED = "STOPPED";
         private const string STATE_HEATING = "HEATING";
@@ -27,7 +29,7 @@ namespace Microwave.Application
                     return ResumeHeating(stateStorage);
                 }
 
-                var oven = new MicrowaveOven(timeInSeconds, powerLevel);
+                var oven = MicrowaveOven.CreateManual(timeInSeconds, powerLevel);
 
                 stateStorage.SetString(SESSION_CURRENT_OVEN, JsonSerializer.Serialize(new { timeInSeconds, powerLevel }));
                 stateStorage.SetString(SESSION_IS_HEATING, "true");
@@ -99,7 +101,7 @@ namespace Microwave.Application
             {
                 stateStorage.SetString(SESSION_IS_HEATING, "false");
                 stateStorage.SetString(SESSION_MICROWAVE_STATE, STATE_STOPPED);
-                var finalProgressString = GenerateProgressString(powerLevel, timeInSeconds) + " Aquecimento concluído";
+                var finalProgressString = GenerateProgressString(powerLevel, timeInSeconds, stateStorage) + " Aquecimento concluído";
                 return new MicrowaveStatus
                 {
                     IsRunning = false,
@@ -112,7 +114,7 @@ namespace Microwave.Application
             }
 
             var progress = (elapsedSeconds * 100) / timeInSeconds;
-            var progressString = GenerateProgressString(powerLevel, elapsedSeconds);
+            var progressString = GenerateProgressString(powerLevel, elapsedSeconds, stateStorage);
 
             return new MicrowaveStatus
             {
@@ -134,9 +136,13 @@ namespace Microwave.Application
         {
             var isHeatingStr = stateStorage.GetString(SESSION_IS_HEATING);
             var ovenDataStr = stateStorage.GetString(SESSION_CURRENT_OVEN);
+            var currentProgramStr = stateStorage.GetString(SESSION_CURRENT_PROGRAM);
 
             if (isHeatingStr != "true" || string.IsNullOrEmpty(ovenDataStr))
                 return OperationResult.CreateError("Erro: Micro-ondas não está aquecendo.", "NOT_HEATING");
+
+            if (!string.IsNullOrEmpty(currentProgramStr))
+                return OperationResult.CreateError("Erro: Não é permitido aumentar tempo em programa pré-definido.", "PREDEFINED_PROGRAM");
 
             try
             {
@@ -145,7 +151,7 @@ namespace Microwave.Application
                 var powerLevel = ovenData.GetProperty("powerLevel").GetInt32();
                 var newTime = currentTime + additionalSeconds;
 
-                new MicrowaveOven(newTime, powerLevel);
+                MicrowaveOven.CreateManual(newTime, powerLevel);
 
                 stateStorage.SetString(SESSION_CURRENT_OVEN, JsonSerializer.Serialize(new { timeInSeconds = newTime, powerLevel }));
 
@@ -184,17 +190,20 @@ namespace Microwave.Application
             }
         }
 
-        private string GenerateProgressString(int powerLevel, int elapsedSeconds)
+        private string GenerateProgressString(int powerLevel, int elapsedSeconds, IStateStorage stateStorage)
         {
             if (elapsedSeconds <= 0)
                 return "";
 
-            var dotPattern = new string('.', powerLevel);
+            var customChar = stateStorage.GetString(SESSION_HEATING_CHAR);
+            var heatingChar = !string.IsNullOrEmpty(customChar) ? customChar : ".";
+
+            var pattern = new string(heatingChar[0], powerLevel);
             var segments = new List<string>();
 
             for (int i = 0; i < elapsedSeconds; i++)
             {
-                segments.Add(dotPattern);
+                segments.Add(pattern);
             }
 
             return string.Join(" ", segments);
@@ -212,9 +221,6 @@ namespace Microwave.Application
             return $"{timeInSeconds}s";
         }
 
-        /// <summary>
-        /// Retoma o aquecimento a partir do ponto onde foi pausado
-        /// </summary>
         private OperationResult ResumeHeating(IStateStorage stateStorage)
         {
             var remainingTimeStr = stateStorage.GetString(SESSION_PAUSED_REMAINING_TIME);
@@ -237,9 +243,6 @@ namespace Microwave.Application
             return OperationResult.CreateSuccess($"Aquecimento retomado: {timeDisplay} restantes a potência {powerLevel}.");
         }
 
-        /// <summary>
-        /// Pausa o aquecimento salvando o tempo restante
-        /// </summary>
         private OperationResult PauseHeating(IStateStorage stateStorage)
         {
             var status = GetHeatingProgress(stateStorage);
@@ -255,25 +258,123 @@ namespace Microwave.Application
             return OperationResult.CreateSuccess($"Aquecimento pausado. Restam {timeDisplay}. Pressione 'Retomar Aquecimento' para continuar.");
         }
 
-        /// <summary>
-        /// Cancela totalmente o aquecimento
-        /// </summary>
         private OperationResult CancelHeating(IStateStorage stateStorage)
         {
             ClearAllSettings(stateStorage);
             return OperationResult.CreateSuccess("Aquecimento cancelado. Todas as configurações foram limpas.");
         }
 
-        /// <summary>
-        /// Limpa todas as configurações e volta ao estado inicial
-        /// </summary>
         private void ClearAllSettings(IStateStorage stateStorage)
         {
             stateStorage.Remove(SESSION_CURRENT_OVEN);
             stateStorage.Remove(SESSION_IS_HEATING);
             stateStorage.Remove(SESSION_START_TIME);
             stateStorage.Remove(SESSION_PAUSED_REMAINING_TIME);
+            stateStorage.Remove(SESSION_CURRENT_PROGRAM);
+            stateStorage.Remove(SESSION_HEATING_CHAR);
             stateStorage.SetString(SESSION_MICROWAVE_STATE, STATE_STOPPED);
+        }
+
+
+        public IEnumerable<PredefinedProgram> GetPredefinedPrograms()
+        {
+            return new List<PredefinedProgram>
+            {
+                new PredefinedProgram
+                {
+                    Name = "Pipoca",
+                    Food = "Pipoca (de micro-ondas)",
+                    TimeInSeconds = 180,
+                    PowerLevel = 7,
+                    HeatingChar = "∩",
+                    Instructions = "Observar o barulho de estouros do milho, caso houver um intervalo de mais de 10 segundos entre um estouro e outro, interrompa o aquecimento."
+                },
+                new PredefinedProgram
+                {
+                    Name = "Leite",
+                    Food = "Leite",
+                    TimeInSeconds = 300,
+                    PowerLevel = 5,
+                    HeatingChar = "∿",
+                    Instructions = "Cuidado com aquecimento de líquidos, o choque térmico aliado ao movimento do recipiente pode causar fervura imediata causando risco de queimaduras."
+                },
+                new PredefinedProgram
+                {
+                    Name = "Carnes de boi",
+                    Food = "Carne em pedaço ou fatias",
+                    TimeInSeconds = 840,
+                    PowerLevel = 4,
+                    HeatingChar = "≡",
+                    Instructions = "Interrompa o processo na metade e vire o conteúdo com a parte de baixo para cima para o descongelamento uniforme."
+                },
+                new PredefinedProgram
+                {
+                    Name = "Frango",
+                    Food = "Frango (qualquer corte)",
+                    TimeInSeconds = 480,
+                    PowerLevel = 7,
+                    HeatingChar = "∴",
+                    Instructions = "Interrompa o processo na metade e vire o conteúdo com a parte de baixo para cima para o descongelamento uniforme."
+                },
+                new PredefinedProgram
+                {
+                    Name = "Feijão",
+                    Food = "Feijão congelado",
+                    TimeInSeconds = 480,
+                    PowerLevel = 9,
+                    HeatingChar = "◊",
+                    Instructions = "Deixe o recipiente destampado e em casos de plástico, cuidado ao retirar o recipiente pois o mesmo pode perder resistência em altas temperaturas."
+                }
+            };
+        }
+
+        public OperationResult StartPredefinedProgram(string programName, IStateStorage stateStorage)
+        {
+            try
+            {
+                var currentState = stateStorage.GetString(SESSION_MICROWAVE_STATE) ?? STATE_STOPPED;
+
+                if (currentState == STATE_PAUSED)
+                {
+                    return ResumeHeating(stateStorage);
+                }
+
+                var programs = GetPredefinedPrograms();
+                var selectedProgram = programs.FirstOrDefault(p => p.Name == programName);
+
+                if (selectedProgram == null)
+                {
+                    return OperationResult.CreateError($"Erro: Programa '{programName}' não encontrado.", "PROGRAM_NOT_FOUND");
+                }
+
+                var oven = MicrowaveOven.CreatePredefined(selectedProgram.TimeInSeconds, selectedProgram.PowerLevel);
+
+                stateStorage.SetString(SESSION_CURRENT_OVEN, JsonSerializer.Serialize(new
+                {
+                    timeInSeconds = selectedProgram.TimeInSeconds,
+                    powerLevel = selectedProgram.PowerLevel
+                }));
+                MicrowaveOven.CreatePredefined(selectedProgram.TimeInSeconds, selectedProgram.PowerLevel);
+                stateStorage.SetString(SESSION_CURRENT_OVEN, JsonSerializer.Serialize(new
+                {
+                    timeInSeconds = selectedProgram.TimeInSeconds,
+                    powerLevel = selectedProgram.PowerLevel
+                }));
+                stateStorage.SetString(SESSION_CURRENT_PROGRAM, programName);
+                stateStorage.SetString(SESSION_HEATING_CHAR, selectedProgram.HeatingChar);
+                stateStorage.SetString(SESSION_IS_HEATING, "true");
+                stateStorage.SetString(SESSION_START_TIME, DateTime.Now.ToString("O"));
+                stateStorage.SetString(SESSION_MICROWAVE_STATE, STATE_HEATING);
+
+                oven.StartHeating();
+
+                var timeDisplay = FormatTimeDisplay(selectedProgram.TimeInSeconds);
+                return OperationResult.CreateSuccess($"Programa '{programName}' iniciado: {timeDisplay} a potência {selectedProgram.PowerLevel}.");
+            }
+            catch (ArgumentException ex)
+            {
+                return OperationResult.CreateError(ex.Message, "INVALID_PARAMETERS");
+            }
         }
     }
 }
