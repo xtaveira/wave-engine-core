@@ -1,0 +1,20 @@
+{
+  "programs": [
+    {
+      "id": "12549c1d-ca27-49ff-adee-b6f0e8108862",
+      "name": "Brownie1",
+      "food": "Brownie",
+      "powerLevel": 3,
+      "timeInSeconds": 1800,
+      "character": "p",
+      "instructions": "quase l\u00E1",
+      "createdAt": "2025-09-03T21:15:17.693204-03:00",
+      "isCustom": true
+    }
+  ],
+  "metadata": {
+    "version": "1.0",
+    "lastModified": "2025-09-03T21:15:17.696678-03:00",
+    "totalPrograms": 1
+  }
+}
