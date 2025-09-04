@@ -13,5 +13,10 @@ namespace Microwave.Domain
 
         IEnumerable<PredefinedProgram> GetPredefinedPrograms();
         OperationResult StartPredefinedProgram(string programName, IStateStorage stateStorage);
+
+        // Level 3 - Custom Programs
+        Task<OperationResult> StartCustomProgramAsync(Guid customProgramId, IStateStorage stateStorage);
+        Task<IEnumerable<ProgramDisplayInfo>> GetAllProgramsAsync();
+        Task<CustomProgram?> GetCustomProgramAsync(Guid id);
     }
 }
