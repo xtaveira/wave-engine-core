@@ -198,6 +198,15 @@ namespace Microwave.Application
             }
         }
 
+        /// <summary>
+        /// Gera string visual de progresso baseada na potência e tempo decorrido.
+        /// Algoritmo: caractere de aquecimento se repete conforme a potência, 
+        /// intercalado com pontos para mostrar progresso temporal.
+        /// </summary>
+        /// <param name="powerLevel">Potência (1-10) - determina frequência do caractere</param>
+        /// <param name="elapsedSeconds">Tempo decorrido para calcular progresso</param>
+        /// <param name="stateStorage">Storage para obter caractere de aquecimento</param>
+        /// <returns>String visual representando o aquecimento em andamento</returns>
         private string GenerateProgressString(int powerLevel, int elapsedSeconds, IStateStorage stateStorage)
         {
             if (elapsedSeconds <= 0)

@@ -237,7 +237,6 @@
     });
 </script>
 
-<!-- Modal para CRUD de Programas Customizados -->
 <div id="customProgramModal" class="modal">
     <div class="modal-content">
         <div class="modal-header">
@@ -531,7 +530,6 @@
         errorElements.forEach(element => element.textContent = '');
     }
 
-    // Fechar modal ao clicar fora dele
     window.onclick = function (event) {
         const modal = document.getElementById('customProgramModal');
         if (event.target === modal) {

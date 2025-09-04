@@ -1,97 +1,80 @@
-# 🎛️ Wave Engine Core - Sistema de Microondas
+# 🎛️ Wave Engine Core
 
-Sistema de controle de microondas desenvolvido em **ASP.NET Core 9.0** com **Clean Architecture**.
+Sistema de controle de microondas em **ASP.NET Core 9.0** com **Clean Architecture**.
 
 ## 🚀 Como Executar
 
 ```bash
-# Clone o repositório
+# Clone e execute
 git clone <repository-url>
 cd wave-engine-core
-
-# Execute a aplicação
 dotnet run --project WaveEngineCore
 
-# Acesse no navegador
-http://localhost:5296
+# Acesse: http://localhost:5296
 ```
 
-## ✨ Funcionalidades
+## ✨ Funcionalidades Implementadas
 
-### Nível 1 - Básico
+### 🥇 **Nível 1 - Básico**
 
-- ✅ Aquecimento manual (1-120s, potência 1-10)
-- ✅ Início rápido (30s, potência 10)
-- ✅ Pausar/Retomar aquecimento
-- ✅ Adicionar tempo (+30s)
-- ✅ Visualização de progresso
+- ✅ **Aquecimento manual** (tempo 1-120s, potência 1-10)
+- ✅ **Aquecimento rápido** (30s na potência 10)
+- ✅ **Pausar/Retomar** aquecimento
+- ✅ **Adicionar tempo** (+30s durante aquecimento)
+- ✅ **String de progresso** visual com caracteres
 
-### Nível 2 - Programas Pré-definidos
+### 🥈 **Nível 2 - Programas Pré-definidos**
 
-- ✅ **Pipoca** (180s, P7) - ∩
-- ✅ **Leite** (300s, P5) - ∿
-- ✅ **Carnes de boi** (840s, P4) - ≡
-- ✅ **Frango** (480s, P7) - ∴
-- ✅ **Feijão** (480s, P9) - ◊
+- ✅ **Pipoca** (180s, potência 7) - ∩
+- ✅ **Leite** (300s, potência 5) - ∿
+- ✅ **Carnes de boi** (840s, potência 4) - ≡
+- ✅ **Frango** (480s, potência 7) - ∴
+- ✅ **Feijão** (480s, potência 9) - ◊
 
-### Nível 3 - Programas Customizados
+### 🥉 **Nível 3 - Programas Personalizados**
 
-- ✅ **Criar programas** (nome, caracter, tempo 1-7200s, potência 1-10)
-- ✅ **Editar programas** existentes
-- ✅ **Excluir programas** personalizados
-- ✅ **Interface unificada** (pré-definidos + customizados)
+- ✅ **Criar programas** customizados (CRUD completo)
+- ✅ **Editar/Excluir** programas existentes
+- ✅ **Validação avançada** (tempo 1-7200s, caracteres únicos)
 - ✅ **Persistência JSON** thread-safe
+- ✅ **Interface unificada** (pré-definidos + customizados)
 
-## 🏗️ Estrutura do Projeto
+### 🏆 **Nível 4 - Web API & Autenticação**
+
+- ✅ **Web API REST** completa (20 endpoints)
+  - **Autenticação**: 5 endpoints (`/api/auth/*`)
+  - **Aquecimento**: 8 endpoints (`/api/microwave/heating/*`)
+  - **Programas**: 7 endpoints (`/api/microwave/programs/*`)
+- ✅ **JWT Bearer Authentication** (8h expiração)
+- ✅ **Sistema de exceções** customizado + middleware
+- ✅ **Criptografia SHA1 + AES** para segurança
+- ✅ **Logging centralizado** thread-safe
+
+## 🏗️ Arquitetura
 
 ```
-wave-engine-core/
-├── Microwave.Domain/          # Regras de negócio e entidades
-│   ├── MicrowaveOven.cs
-│   ├── DTOs/
-│   └── Validators/
-├── Microwave.Application/     # Serviços da aplicação
-│   └── MicrowaveService.cs
-├── Microwave.Infrastructure/  # Persistência e infraestrutura
-│   ├── Repositories/
-│   ├── Services/
-│   └── Data/
-├── Microwave.Tests/          # Testes (122 passando)
-│   ├── Unit/
-│   ├── Integration/
-│   └── Scenarios/
-├── WaveEngineCore/           # Interface web (Razor Pages)
-│   ├── Pages/Index.cshtml
-│   ├── Controllers/
-│   └── wwwroot/
-└── WaveEngineCore.sln
+📁 Microwave.Domain/          # Entidades e regras de negócio
+📁 Microwave.Application/     # Serviços da aplicação
+📁 Microwave.Infrastructure/  # Persistência e infraestrutura
+📁 Microwave.Tests/          # Suite de testes (220 testes)
+📁 WaveEngineCore/           # Web API + Interface web
 ```
 
 ## 🧪 Testes
 
 ```bash
-# Executar todos os testes
 dotnet test
-
-# Resultado esperado: 122 testes passando
+# 220 testes passando ✅
 ```
 
-## �️ Tecnologias
+## 🛠️ Stack
 
-- **Backend**: ASP.NET Core 9.0, C# 12
-- **Frontend**: Razor Pages, HTML5, CSS3, JavaScript
-- **Arquitetura**: Clean Architecture, Strategy Pattern, Factory Pattern
-- **Testes**: xUnit (122 testes)
-- **Persistência**: Session Storage + JSON File Storage
-
-## 📝 Padrões Implementados
-
-- **Clean Architecture** (Domain, Application, Infrastructure, Presentation)
-- **Strategy Pattern** (Validação de tempo)
-- **Factory Pattern** (Criação de validadores)
-- **Repository Pattern** (IStateStorage)
-- **Dependency Injection**
+**Backend**: ASP.NET Core 9.0, JWT Authentication  
+**Frontend**: Razor Pages, JavaScript  
+**Arquitetura**: Clean Architecture/DDD  
+**Testes**: xUnit  
+**Persistência**: JSON + Session Storage
 
 ---
 
-**Status**: ✅ Funcional | 🧪 122 testes passando | 🏗️ Clean Architecture
+**Status**: 🚀 Nível 4 Completo | 🧪 220 testes | 🔐 JWT Auth | 📊 20 endpoints API
