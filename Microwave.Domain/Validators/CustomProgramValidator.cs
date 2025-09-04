@@ -3,6 +3,12 @@ using Microwave.Domain.Interfaces;
 
 namespace Microwave.Domain.Validators;
 
+/// <summary>
+/// Validador de programas customizados com regras específicas de negócio:
+/// - Caracteres reservados para programas pré-definidos
+/// - Unicidade de caracteres entre todos os programas
+/// - Limites de tempo, potência e tamanho de campos
+/// </summary>
 public class CustomProgramValidator
 {
     private readonly IProgramDisplayService _programDisplayService;
