@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microwave.Domain;
 using Microwave.Domain.DTOs;
+using Microwave.Domain.Interfaces;
 using WaveEngineCore.Infrastructure;
 
 namespace WaveEngineCore.Pages;
@@ -10,22 +11,26 @@ public class IndexModel : PageModel
 {
     private readonly ILogger<IndexModel> _logger;
     private readonly IMicrowaveService _microwaveService;
+    private readonly IProgramDisplayService _programDisplayService;
 
     public IEnumerable<PredefinedProgram> PredefinedPrograms { get; set; } = new List<PredefinedProgram>();
+    public IEnumerable<ProgramDisplayInfo> AllPrograms { get; set; } = new List<ProgramDisplayInfo>();
 
-    public IndexModel(ILogger<IndexModel> logger, IMicrowaveService microwaveService)
+    public IndexModel(ILogger<IndexModel> logger, IMicrowaveService microwaveService, IProgramDisplayService programDisplayService)
     {
         _logger = logger;
         _microwaveService = microwaveService;
+        _programDisplayService = programDisplayService;
     }
 
-    public void OnGet()
+    public async Task OnGetAsync()
     {
         var stateStorage = new SessionStateStorage(HttpContext.Session);
         var status = _microwaveService.GetHeatingProgress(stateStorage);
         ViewData["CurrentStatus"] = status;
 
         PredefinedPrograms = _microwaveService.GetPredefinedPrograms();
+        AllPrograms = await _microwaveService.GetAllProgramsAsync();
     }
 
     public IActionResult OnPostStartHeating(int timeInSeconds, int powerLevel)
@@ -38,6 +43,7 @@ public class IndexModel : PageModel
         ViewData["CurrentStatus"] = status;
 
         PredefinedPrograms = _microwaveService.GetPredefinedPrograms();
+        AllPrograms = _microwaveService.GetAllProgramsAsync().Result;
 
         return Page();
     }
@@ -49,6 +55,7 @@ public class IndexModel : PageModel
         ViewData["Message"] = result.Message;
 
         PredefinedPrograms = _microwaveService.GetPredefinedPrograms();
+        AllPrograms = _microwaveService.GetAllProgramsAsync().Result;
 
         return Page();
     }
@@ -60,6 +67,7 @@ public class IndexModel : PageModel
         ViewData["Message"] = result.Message;
 
         PredefinedPrograms = _microwaveService.GetPredefinedPrograms();
+        AllPrograms = _microwaveService.GetAllProgramsAsync().Result;
 
         return Page();
     }
@@ -74,6 +82,7 @@ public class IndexModel : PageModel
         ViewData["CurrentStatus"] = status;
 
         PredefinedPrograms = _microwaveService.GetPredefinedPrograms();
+        AllPrograms = _microwaveService.GetAllProgramsAsync().Result;
 
         return Page();
     }
@@ -88,6 +97,7 @@ public class IndexModel : PageModel
         ViewData["CurrentStatus"] = status;
 
         PredefinedPrograms = _microwaveService.GetPredefinedPrograms();
+        AllPrograms = _microwaveService.GetAllProgramsAsync().Result;
 
         return Page();
     }
@@ -102,6 +112,7 @@ public class IndexModel : PageModel
         ViewData["CurrentStatus"] = status;
 
         PredefinedPrograms = _microwaveService.GetPredefinedPrograms();
+        AllPrograms = _microwaveService.GetAllProgramsAsync().Result;
 
         return Page();
     }

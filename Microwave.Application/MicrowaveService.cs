@@ -1,11 +1,19 @@
 using Microwave.Domain;
 using Microwave.Domain.DTOs;
+using Microwave.Domain.Interfaces;
 using System.Text.Json;
 
 namespace Microwave.Application
 {
     public class MicrowaveService : IMicrowaveService
     {
+        private readonly IProgramDisplayService _programDisplayService;
+
+        public MicrowaveService(IProgramDisplayService programDisplayService)
+        {
+            _programDisplayService = programDisplayService;
+        }
+
         private const string SESSION_CURRENT_OVEN = "CurrentOven";
         private const string SESSION_IS_HEATING = "IsHeating";
         private const string SESSION_START_TIME = "StartTime";
@@ -375,6 +383,72 @@ namespace Microwave.Application
             {
                 return OperationResult.CreateError(ex.Message, "INVALID_PARAMETERS");
             }
+        }
+
+        public async Task<OperationResult> StartCustomProgramAsync(Guid customProgramId, IStateStorage stateStorage)
+        {
+            try
+            {
+                var currentState = stateStorage.GetString(SESSION_MICROWAVE_STATE) ?? STATE_STOPPED;
+
+                if (currentState == STATE_PAUSED)
+                {
+                    return ResumeHeating(stateStorage);
+                }
+
+                var customProgram = await GetCustomProgramAsync(customProgramId);
+                if (customProgram == null)
+                {
+                    return OperationResult.CreateError($"Erro: Programa customizado não encontrado.", "CUSTOM_PROGRAM_NOT_FOUND");
+                }
+
+                var oven = MicrowaveOven.CreateCustom(customProgram.TimeInSeconds, customProgram.PowerLevel);
+
+                stateStorage.SetString(SESSION_CURRENT_OVEN, JsonSerializer.Serialize(new
+                {
+                    timeInSeconds = customProgram.TimeInSeconds,
+                    powerLevel = customProgram.PowerLevel
+                }));
+                stateStorage.SetString(SESSION_CURRENT_PROGRAM, $"custom-{customProgramId}");
+                stateStorage.SetString(SESSION_HEATING_CHAR, customProgram.Character.ToString());
+                stateStorage.SetString(SESSION_IS_HEATING, "true");
+                stateStorage.SetString(SESSION_START_TIME, DateTime.Now.ToString("O"));
+                stateStorage.SetString(SESSION_MICROWAVE_STATE, STATE_HEATING);
+
+                oven.StartHeating();
+
+                var timeDisplay = FormatTimeDisplay(customProgram.TimeInSeconds);
+                return OperationResult.CreateSuccess($"Programa '{customProgram.Name}' iniciado: {timeDisplay} a potência {customProgram.PowerLevel}.");
+            }
+            catch (ArgumentException ex)
+            {
+                return OperationResult.CreateError(ex.Message, "INVALID_PARAMETERS");
+            }
+        }
+
+        public async Task<IEnumerable<ProgramDisplayInfo>> GetAllProgramsAsync()
+        {
+            return await _programDisplayService.GetAllProgramsAsync();
+        }
+
+        public async Task<CustomProgram?> GetCustomProgramAsync(Guid id)
+        {
+            var programInfo = await _programDisplayService.GetProgramByIdAsync(id.ToString());
+            if (programInfo == null || !programInfo.IsCustom)
+                return null;
+
+            return new CustomProgram(
+                programInfo.Name,
+                programInfo.Food,
+                programInfo.PowerLevel,
+                programInfo.TimeInSeconds,
+                programInfo.Character,
+                programInfo.Instructions
+            )
+            {
+                Id = Guid.Parse(programInfo.Id),
+                CreatedAt = programInfo.CreatedAt ?? DateTime.Now
+            };
         }
     }
 }

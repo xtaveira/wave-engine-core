@@ -35,6 +35,10 @@ namespace Microwave.Domain
             return new MicrowaveOven(timeInSeconds, powerLevel, TimeValidatorFactory.CreatePredefined());
         }
 
+        public static MicrowaveOven CreateCustom(int timeInSeconds, int powerLevel)
+        {
+            return new MicrowaveOven(timeInSeconds, powerLevel, TimeValidatorFactory.CreateCustom());
+        }
         public void StartHeating()
         {
         }

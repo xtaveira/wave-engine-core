@@ -7,7 +7,7 @@ public class CustomProgramValidator
 {
     private readonly IProgramDisplayService _programDisplayService;
     private static readonly char[] ForbiddenCharacters = { '.', ' ', '\t', '\n', '\r' };
-    private static readonly char[] SpecialCharacters = { '∩', '∿', '≡', '∴', '◊' }; // Caracteres dos programas predefinidos
+    private static readonly char[] SpecialCharacters = { '∩', '∿', '≡', '∴', '◊' };
 
     public CustomProgramValidator(IProgramDisplayService programDisplayService)
     {
@@ -18,10 +18,7 @@ public class CustomProgramValidator
     {
         var result = new ValidationResult();
 
-        // Validações básicas
         ValidateBasicFields(program, result);
-
-        // Validações assíncronas
         await ValidateUniqueCharacterAsync(program, result, isUpdate);
         await ValidateUniqueNameAsync(program, result, isUpdate);
 
@@ -30,7 +27,6 @@ public class CustomProgramValidator
 
     private void ValidateBasicFields(CustomProgram program, ValidationResult result)
     {
-        // Nome obrigatório
         if (string.IsNullOrWhiteSpace(program.Name))
         {
             result.AddError("Nome do programa é obrigatório");
@@ -40,7 +36,6 @@ public class CustomProgramValidator
             result.AddError("Nome deve ter entre 2 e 50 caracteres");
         }
 
-        // Alimento obrigatório
         if (string.IsNullOrWhiteSpace(program.Food))
         {
             result.AddError("Nome do alimento é obrigatório");
@@ -50,22 +45,18 @@ public class CustomProgramValidator
             result.AddError("Alimento deve ter entre 2 e 50 caracteres");
         }
 
-        // Potência
         if (program.PowerLevel < 1 || program.PowerLevel > 10)
         {
             result.AddError("Potência deve estar entre 1 e 10");
         }
 
-        // Tempo
         if (program.TimeInSeconds < 1 || program.TimeInSeconds > 7200)
         {
             result.AddError("Tempo deve estar entre 1 e 7200 segundos (2 horas)");
         }
 
-        // Caractere
         ValidateCharacter(program.Character, result);
 
-        // Instruções (opcional)
         if (!string.IsNullOrEmpty(program.Instructions) && program.Instructions.Length > 200)
         {
             result.AddError("Instruções não podem exceder 200 caracteres");
@@ -113,9 +104,6 @@ public class CustomProgramValidator
 
     private async Task ValidateUniqueNameAsync(CustomProgram program, ValidationResult result, bool isUpdate)
     {
-        // Esta validação pode ser implementada futuramente se necessário
-        // Por enquanto, permitimos nomes duplicados pois o usuário pode querer
-        // diferentes versões do mesmo programa com configurações diferentes
         await Task.CompletedTask;
     }
 }

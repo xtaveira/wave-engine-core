@@ -1,9 +1,13 @@
 using Microwave.Application;
 using Microwave.Domain;
+using Microwave.Domain.Interfaces;
+using Microwave.Infrastructure.Repositories;
+using Microwave.Infrastructure.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddRazorPages();
+builder.Services.AddControllers();
 
 builder.Services.AddDistributedMemoryCache();
 builder.Services.AddSession(options =>
@@ -14,6 +18,13 @@ builder.Services.AddSession(options =>
 });
 
 builder.Services.AddScoped<IMicrowaveService, MicrowaveService>();
+builder.Services.AddScoped<ICustomProgramRepository>(provider =>
+{
+    var dataPath = Path.Combine(builder.Environment.ContentRootPath, "Data", "custom-programs.json");
+    return new JsonCustomProgramRepository(dataPath);
+});
+builder.Services.AddScoped<IProgramDisplayService, ProgramDisplayService>();
+builder.Services.AddScoped<CustomProgramService>();
 
 var app = builder.Build();
 
@@ -31,6 +42,7 @@ app.UseRouting();
 
 app.UseAuthorization();
 
+app.MapControllers();
 app.MapStaticAssets();
 app.MapRazorPages()
    .WithStaticAssets();

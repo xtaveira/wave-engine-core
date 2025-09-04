@@ -6,26 +6,56 @@
 
 <h1>🎛️ Micro-ondas Digital</h1>
 
-<h2>🍽️ Programas Pré-definidos</h2>
+<h2>🍽️ Todos os Programas</h2>
 <div class="predefined-programs">
-    @foreach (var program in Model.PredefinedPrograms)
+    @foreach (var program in Model.AllPrograms)
     {
-        <div class="program-card">
-            <form method="post" asp-page-handler="StartPredefinedProgram" style="margin: 0;">
-                <input type="hidden" name="programName" value="@program.Name" />
-                <button type="submit" class="program-btn" data-program="@program.Name">
-                    <strong>@program.Name</strong><br />
+        <div class="program-card @(program.IsCustom ? "custom-program" : "")">
+            @if (program.IsCustom)
+            {
+                <button type="button" class="program-btn" onclick="startCustomProgram('@program.Id')">
+                    <strong>@program.DisplayName</strong><br />
                     <small>@program.Food</small><br />
-                    <small>@(program.TimeInSeconds >= 60 ? $"{program.TimeInSeconds/60}:{(program.TimeInSeconds%60):00}" :
-                                            $"{program.TimeInSeconds}s"), P@(program.PowerLevel)</small>
+                    <small>@program.TimeFormatted, P@(program.PowerLevel)</small>
                 </button>
-            </form>
-            <div class="program-instructions">
-                <strong>Instruções:</strong><br />
-                @program.Instructions
-            </div>
+                <div class="program-instructions">
+                    <strong>Instruções:</strong><br />
+                    @(string.IsNullOrEmpty(program.Instructions) ? "Nenhuma instrução específica." : program.Instructions)
+                    <div class="program-actions">
+                        <button type="button" class="btn-program-action btn-edit" onclick="editCustomProgram('@program.Id')">
+                            ✏️ Editar
+                        </button>
+                        <button type="button" class="btn-program-action btn-delete"
+                            onclick="deleteCustomProgram('@program.Id', '@program.Name')">
+                            🗑️ Excluir
+                        </button>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <form method="post" asp-page-handler="StartPredefinedProgram" style="margin: 0;">
+                    <input type="hidden" name="programName" value="@program.Name" />
+                    <button type="submit" class="program-btn" data-program="@program.Name">
+                        <strong>@program.Name</strong><br />
+                        <small>@program.Food</small><br />
+                        <small>@program.TimeFormatted, P@(program.PowerLevel)</small>
+                    </button>
+                </form>
+                <div class="program-instructions">
+                    <strong>Instruções:</strong><br />
+                    @program.Instructions
+                </div>
+            }
         </div>
     }
+</div>
+
+<div class="custom-programs-header">
+    <h3>✨ Programas Personalizados</h3>
+    <button type="button" class="btn-add-custom" onclick="openCustomProgramModal()">
+        ➕ Criar Programa
+    </button>
 </div>
 
 <hr style="margin: 20px 0;" />
@@ -205,4 +235,307 @@
             return false;
         }
     });
+</script>
+
+<!-- Modal para CRUD de Programas Customizados -->
+<div id="customProgramModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 class="modal-title" id="modalTitle">Criar Programa Personalizado</h2>
+            <button type="button" class="close" onclick="closeCustomProgramModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <form id="customProgramForm">
+                <div class="form-group">
+                    <label for="programName">Nome do Programa:</label>
+                    <input type="text" id="programName" name="name" required maxlength="50">
+                    <div class="error-message" id="nameError"></div>
+                </div>
+
+                <div class="form-group">
+                    <label for="programFood">Alimento:</label>
+                    <input type="text" id="programFood" name="food" required maxlength="50">
+                    <div class="error-message" id="foodError"></div>
+                </div>
+
+                <div class="form-group">
+                    <label for="programPower">Potência (1-10):</label>
+                    <input type="number" id="programPower" name="powerLevel" min="1" max="10" required>
+                    <div class="error-message" id="powerError"></div>
+                </div>
+
+                <div class="form-group">
+                    <label for="programTime">Tempo (segundos, 1-7200):</label>
+                    <input type="number" id="programTime" name="timeInSeconds" min="1" max="7200" required>
+                    <div class="error-message" id="timeError"></div>
+                </div>
+
+                <div class="form-group">
+                    <label for="programCharacter">Caractere de Aquecimento:</label>
+                    <div style="display: flex; align-items: center;">
+                        <input type="text" id="programCharacter" name="character" maxlength="1" required
+                            onkeyup="validateCharacter(this.value)" style="flex: 1;">
+                        <div class="character-preview" id="characterPreview"></div>
+                    </div>
+                    <div class="error-message" id="characterError"></div>
+                </div>
+
+                <div class="form-group">
+                    <label for="programInstructions">Instruções (opcional):</label>
+                    <textarea id="programInstructions" name="instructions" maxlength="200"
+                        placeholder="Instruções especiais para este programa..."></textarea>
+                    <div class="error-message" id="instructionsError"></div>
+                </div>
+
+                <input type="hidden" id="programId" name="id">
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn-modal btn-secondary-modal"
+                onclick="closeCustomProgramModal()">Cancelar</button>
+            <button type="button" class="btn-modal btn-primary-modal" onclick="saveCustomProgram()">Salvar</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    let currentEditingId = null;
+
+    async function startCustomProgram(programId) {
+        try {
+            const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+
+            const response = await fetch(`/api/microwave/programs/custom/${programId}/start`, {
+                method: 'POST',
+                headers: {
+                    'RequestVerificationToken': token,
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            const result = await response.json();
+
+            if (response.ok) {
+                alert(result.message);
+                location.reload();
+            } else {
+                alert(`Erro: ${result.message}`);
+            }
+        } catch (error) {
+            console.error('Erro ao iniciar programa:', error);
+            alert('Erro ao iniciar programa personalizado.');
+        }
+    }
+
+    function openCustomProgramModal(programId = null) {
+        currentEditingId = programId;
+        const modal = document.getElementById('customProgramModal');
+        const modalTitle = document.getElementById('modalTitle');
+        const form = document.getElementById('customProgramForm');
+
+        form.reset();
+        clearErrors();
+
+        if (programId) {
+            modalTitle.textContent = 'Editar Programa Personalizado';
+            loadProgramData(programId);
+        } else {
+            modalTitle.textContent = 'Criar Programa Personalizado';
+        }
+
+        modal.style.display = 'block';
+    }
+
+    function closeCustomProgramModal() {
+        const modal = document.getElementById('customProgramModal');
+        modal.style.display = 'none';
+        currentEditingId = null;
+        clearErrors();
+    }
+
+    async function loadProgramData(programId) {
+        try {
+            const response = await fetch(`/api/microwave/programs/custom/${programId}`);
+
+            if (response.ok) {
+                const program = await response.json();
+
+                document.getElementById('programName').value = program.name;
+                document.getElementById('programFood').value = program.food;
+                document.getElementById('programPower').value = program.powerLevel;
+                document.getElementById('programTime').value = program.timeInSeconds;
+                document.getElementById('programCharacter').value = program.character;
+                document.getElementById('programInstructions').value = program.instructions || '';
+                document.getElementById('programId').value = program.id;
+
+                updateCharacterPreview(program.character);
+            } else {
+                alert('Erro ao carregar dados do programa.');
+            }
+        } catch (error) {
+            console.error('Erro ao carregar programa:', error);
+            alert('Erro ao carregar dados do programa.');
+        }
+    }
+
+    async function saveCustomProgram() {
+        clearErrors();
+
+        const formData = {
+            name: document.getElementById('programName').value,
+            food: document.getElementById('programFood').value,
+            powerLevel: parseInt(document.getElementById('programPower').value),
+            timeInSeconds: parseInt(document.getElementById('programTime').value),
+            character: document.getElementById('programCharacter').value,
+            instructions: document.getElementById('programInstructions').value
+        };
+
+        if (!validateForm(formData)) {
+            return;
+        }
+
+        try {
+            const isEditing = currentEditingId !== null;
+            const url = isEditing
+                ? `/api/microwave/programs/custom/${currentEditingId}`
+                : '/api/microwave/programs/custom';
+            const method = isEditing ? 'PUT' : 'POST';
+
+            const response = await fetch(url, {
+                method: method,
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(formData)
+            });
+
+            const result = await response.json();
+
+            if (response.ok) {
+                alert(isEditing ? 'Programa atualizado com sucesso!' : 'Programa criado com sucesso!');
+                closeCustomProgramModal();
+                location.reload();
+            } else {
+                if (result.message.includes(',')) {
+                    const errors = result.message.split(',');
+                    errors.forEach(error => displayError(error.trim()));
+                } else {
+                    alert(`Erro: ${result.message}`);
+                }
+            }
+        } catch (error) {
+            console.error('Erro ao salvar programa:', error);
+            alert('Erro ao salvar programa.');
+        }
+    }
+
+    async function deleteCustomProgram(programId, programName) {
+        if (!confirm(`Tem certeza que deseja excluir o programa "${programName}"?`)) {
+            return;
+        }
+
+        try {
+            const response = await fetch(`/api/microwave/programs/custom/${programId}`, {
+                method: 'DELETE'
+            });
+
+            const result = await response.json();
+
+            if (response.ok) {
+                alert('Programa excluído com sucesso!');
+                location.reload();
+            } else {
+                alert(`Erro: ${result.message}`);
+            }
+        } catch (error) {
+            console.error('Erro ao excluir programa:', error);
+            alert('Erro ao excluir programa.');
+        }
+    }
+
+    function editCustomProgram(programId) {
+        openCustomProgramModal(programId);
+    }
+
+    async function validateCharacter(character) {
+        updateCharacterPreview(character);
+
+        if (character.length === 0) {
+            return;
+        }
+
+        const excludeId = currentEditingId;
+        const url = excludeId
+            ? `/api/microwave/characters/${encodeURIComponent(character)}/unique?excludeId=${excludeId}`
+            : `/api/microwave/characters/${encodeURIComponent(character)}/unique`;
+
+        try {
+            const response = await fetch(url);
+            const result = await response.json();
+
+            const errorDiv = document.getElementById('characterError');
+            if (!result.isUnique) {
+                errorDiv.textContent = `Caractere '${character}' já está sendo usado.`;
+            } else {
+                errorDiv.textContent = '';
+            }
+        } catch (error) {
+            console.error('Erro ao validar caractere:', error);
+        }
+    }
+
+    function updateCharacterPreview(character) {
+        const preview = document.getElementById('characterPreview');
+        preview.textContent = character || '';
+    }
+
+    function validateForm(formData) {
+        let isValid = true;
+
+        if (!formData.name || formData.name.length < 2) {
+            displayError('Nome deve ter pelo menos 2 caracteres.', 'nameError');
+            isValid = false;
+        }
+
+        if (!formData.food || formData.food.length < 2) {
+            displayError('Alimento deve ter pelo menos 2 caracteres.', 'foodError');
+            isValid = false;
+        }
+
+        if (formData.powerLevel < 1 || formData.powerLevel > 10) {
+            displayError('Potência deve estar entre 1 e 10.', 'powerError');
+            isValid = false;
+        }
+
+        if (formData.timeInSeconds < 1 || formData.timeInSeconds > 7200) {
+            displayError('Tempo deve estar entre 1 e 7200 segundos.', 'timeError');
+            isValid = false;
+        }
+
+        if (!formData.character || formData.character.length !== 1) {
+            displayError('Caractere é obrigatório.', 'characterError');
+            isValid = false;
+        }
+
+        return isValid;
+    }
+
+    function displayError(message, elementId = null) {
+        if (elementId) {
+            document.getElementById(elementId).textContent = message;
+        }
+    }
+
+    function clearErrors() {
+        const errorElements = document.querySelectorAll('.error-message');
+        errorElements.forEach(element => element.textContent = '');
+    }
+
+    // Fechar modal ao clicar fora dele
+    window.onclick = function (event) {
+        const modal = document.getElementById('customProgramModal');
+        if (event.target === modal) {
+            closeCustomProgramModal();
+        }
+    };
 </script>
