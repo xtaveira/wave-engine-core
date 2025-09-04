@@ -28,11 +28,19 @@ http://localhost:5296
 
 ### Nível 2 - Programas Pré-definidos
 
-- ✅ **Pipoca** (180s, P7)
-- ✅ **Leite** (300s, P5)
-- ✅ **Carnes de boi** (840s, P4)
-- ✅ **Frango** (480s, P7)
-- ✅ **Feijão** (480s, P9)
+- ✅ **Pipoca** (180s, P7) - ∩
+- ✅ **Leite** (300s, P5) - ∿
+- ✅ **Carnes de boi** (840s, P4) - ≡
+- ✅ **Frango** (480s, P7) - ∴
+- ✅ **Feijão** (480s, P9) - ◊
+
+### Nível 3 - Programas Customizados
+
+- ✅ **Criar programas** (nome, caracter, tempo 1-7200s, potência 1-10)
+- ✅ **Editar programas** existentes
+- ✅ **Excluir programas** personalizados
+- ✅ **Interface unificada** (pré-definidos + customizados)
+- ✅ **Persistência JSON** thread-safe
 
 ## 🏗️ Estrutura do Projeto
 
@@ -45,7 +53,10 @@ wave-engine-core/
 ├── Microwave.Application/     # Serviços da aplicação
 │   └── MicrowaveService.cs
 ├── Microwave.Infrastructure/  # Persistência e infraestrutura
-├── Microwave.Tests/          # Testes (94 passando)
+│   ├── Repositories/
+│   ├── Services/
+│   └── Data/
+├── Microwave.Tests/          # Testes (122 passando)
 │   ├── Unit/
 │   ├── Integration/
 │   └── Scenarios/
@@ -62,7 +73,7 @@ wave-engine-core/
 # Executar todos os testes
 dotnet test
 
-# Resultado esperado: 94 testes passando
+# Resultado esperado: 122 testes passando
 ```
 
 ## �️ Tecnologias
@@ -70,8 +81,8 @@ dotnet test
 - **Backend**: ASP.NET Core 9.0, C# 12
 - **Frontend**: Razor Pages, HTML5, CSS3, JavaScript
 - **Arquitetura**: Clean Architecture, Strategy Pattern, Factory Pattern
-- **Testes**: xUnit (94 testes)
-- **Persistência**: Session Storage
+- **Testes**: xUnit (122 testes)
+- **Persistência**: Session Storage + JSON File Storage
 
 ## 📝 Padrões Implementados
 
@@ -83,4 +94,4 @@ dotnet test
 
 ---
 
-**Status**: ✅ Funcional | 🧪 94 testes passando | 🏗️ Clean Architecture
+**Status**: ✅ Funcional | 🧪 122 testes passando | 🏗️ Clean Architecture
